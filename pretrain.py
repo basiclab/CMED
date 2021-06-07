@@ -10,23 +10,25 @@ try:
     from pytorch_lightning.callbacks.lr_logger import LearningRateLogger
 except:
     from pytorch_lightning.callbacks import LearningRateMonitor as LearningRateLogger
-from modules.dataset import H5TextDataset, TrexDataset, WikiDataset
 import torch
 from torch.optim.lr_scheduler import LambdaLR
 from pytorch_lightning.loggers import TensorBoardLogger
-from mlm_config import FLAGS, flags
-from modules.utils import (
-    CheckpointEveryNSteps, print_parameters, 
-)
-from modules.kg_dataset import infiniteloop, Dbpedia
-import numpy as np
-import PIL.Image
-from modules.config import FastKGBertConfig
-from modules.models import EntityDisambiguation
-from modules.kgs.spacylink import SpacyKGTokenizer
-from transformers import PretrainedConfig, AutoTokenizer, AutoModelForMaskedLM
-from modules.kgs.utils import KG_DataCollatorForLanguageModeling
 
+from transformers import PretrainedConfig, AutoTokenizer, AutoModelForMaskedLM
+import os 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+from cmed.ed_datasets import WikiDataset
+from cmed.pretrain_config import FLAGS, flags
+from cmed.utils import (
+    CheckpointEveryNSteps, print_parameters, load_kg_embeddings
+)
+from cmed.kg_dataset import infiniteloop, Dbpedia
+import numpy as np
+from cmed.config import FastKGBertConfig
+from cmed.models import EntityDisambiguation
+from cmed.optimizer import Lamb
+
+from cmed.batch_fn import KG_DataCollatorForLanguageModeling
 
 
 flags.DEFINE_string('kg_cache_path', '', help='checkpoint name')
@@ -35,6 +37,8 @@ flags.DEFINE_string('kg_filename_path', '', help='checkpoint name')
 flags.DEFINE_string('kg_data_path', '', help='checkpoint name')
 flags.DEFINE_string('kg_name', '', help='kg name')
 flags.DEFINE_string('pretrained_name', 'bert-base-cased', help='kg name')
+
+flags.DEFINE_list('datasets', [''], help='kg name')
 
 flags.DEFINE_enum('kg_inject_mode', 'concat', ['concat', 'prepend'], help='concat or prepend')
 flags.DEFINE_integer('kg_hidden_layer', 4, help='kg hidden dimension')
@@ -84,7 +88,6 @@ class EntityLinkingLearner(pl.LightningModule):
 
         if self.global_step % 5 == 0:
             tensorboard = self.logger.experiment
-            #     results.loss.item(), results.mlm_loss.item(), results.disc_loss.item(), results.gen_acc.item(), results.disc_acc.item()) 
             for key, value in result.items():
                 tensorboard.add_scalar(key, value.item(), self.global_step)
 
@@ -130,7 +133,6 @@ class EntityLinkingLearner(pl.LightningModule):
             ]
             return optimizer_grouped_parameters
 
-        from pytorch_lamb import Lamb
         optimizer = Lamb(get_params_without_weight_decay_ln(self.net.named_parameters(), weight_decay=0.1), 
             lr=FLAGS.lr, min_trust=0.25, betas=(0.9, 0.999), eps=1e-08)
 
@@ -152,42 +154,30 @@ if __name__ == '__main__':
 
 
     text_tokenizer = AutoTokenizer.from_pretrained(FLAGS.tokenizer_base)
-    tokenizer = SpacyKGTokenizer(FLAGS.kg_cache_path, 
-        FLAGS.kg_filename_path,
-        drop_ent_ratio=0,
-        train=True,
-        pad_output=False,
-        pad_id=text_tokenizer.pad_token_id,
-        spacy_el=FLAGS.spacy_el_path,
-        tokenizer=text_tokenizer, name='fb15k_237', mode=FLAGS.kg_inject_mode)
     print('tokenizer graph loaded!')
-    kg_model, entity_vocab_size, relation_vocab_size, type_vocab_size, _  = tokenizer.load_embeddings(FLAGS.kg_pretrained_path)
+    kg_model, entity_vocab_size, relation_vocab_size, type_vocab_size, _  = load_kg_embeddings(FLAGS.kg_pretrained_path)
+
     print('stats ',entity_vocab_size, relation_vocab_size, type_vocab_size)
-    # trex_data = TrexDataset(tokenizer, '/mnt/md0/theblackcat/trex/', 
-    #     max_length=FLAGS.data_max_length, 
-    #     name='roberta-base' if 'roberta' in FLAGS.pretrained_name else '')
-    wikidata_luke = WikiDataset(tokenizer,'/mnt/md0/theblackcat/wikipedia_el/wikipedia_dataset.jsonl', 
-        name='roberta-base4' if 'roberta' in FLAGS.pretrained_name else '', 
-        max_length=FLAGS.data_max_length,
-        cache_path=FLAGS.kg_cache_path)
-    # wikidata_blink = WikiDataset(tokenizer,'/mnt/md0/theblackcat/wikipedia_el/wikipedia_dataset.jsonl', 
-    #     name='roberta-base' if 'roberta' in FLAGS.pretrained_name else '', 
-    #     max_length=FLAGS.data_max_length,
-    #     cache_path=FLAGS.kg_cache_path)
+    datasets = []
+    for dataset_filename in FLAGS.datasets:
+        wikidata = WikiDataset(dataset_filename, FLAGS.kg_cache_path, tokenizer=text_tokenizer, max_type_ids=type_vocab_size-1)
+        datasets.append(wikidata)
+    concat = ConcatDataset( datasets )
 
     # print(wikidata_blink.h5_filename, wikidata_luke.h5_filename)
-    data_collator = KG_DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=True, 
+    data_collator = KG_DataCollatorForLanguageModeling(tokenizer=text_tokenizer, 
+        mlm=True, 
         tokenizer_name=FLAGS.pretrained_name,
         mlm_probability=FLAGS.mlm_prob,
         vocab_size=len(text_tokenizer),
         ent_vocab_size=entity_vocab_size,
     )
-    concat = ConcatDataset([ wikidata_luke ])
-
     train_loader = DataLoader(concat, batch_size=FLAGS.batch_size, 
         num_workers=FLAGS.num_workers, shuffle=True, collate_fn=data_collator)
 
-    dbpedia_dataset = Dbpedia(os.path.join(FLAGS.kg_filename_path,'train.txt'), 'train', datasetname='ntee_2014')
+
+    dbpedia_dataset = Dbpedia(
+        os.path.join(FLAGS.kg_filename_path,'train.txt'), 'train', datasetname='ntee_2014')
     looper = infiniteloop( DataLoader(dbpedia_dataset, batch_size=FLAGS.kg_batch_size,
         num_workers=10, shuffle=True), to_cuda=True)
 
@@ -205,7 +195,7 @@ if __name__ == '__main__':
         layer_stack_mult=FLAGS.layer_mult  if not FLAGS.baseline else -1,
         layer_drop_prob=FLAGS.layer_dropout,
         pretrained_name=FLAGS.pretrained_name,
-        vocab_size=tokenizer.tokenizer.vocab_size,
+        vocab_size=len(text_tokenizer),
         embed_size=FLAGS.embed_dim,
         lm_weight=FLAGS.lm_weight,
         diversity_weight=FLAGS.diversity_weight,
@@ -221,7 +211,7 @@ if __name__ == '__main__':
         type_vocab_size= 1 if 'roberta' in FLAGS.pretrained_name else 2,
         initializer_range=0.02,
         layer_norm_eps=1e-12,
-        pad_token_id=tokenizer.pad_token_id,
+        pad_token_id=text_tokenizer.pad_token_id,
     )
     print('Train with KG ?', FLAGS.with_kg)
     model = EntityDisambiguation(bert_config, w_kg=FLAGS.with_kg)
@@ -245,17 +235,15 @@ if __name__ == '__main__':
         model.knowledge_model.load_state_dict(kg_model.state_dict())
     else:
         print('No load pretrain weights')
-    model = model.cuda()
 
 
     if FLAGS.mine_negative_sampling and FLAGS.ckpt and len(FLAGS.ckpt) > 0:
-        from modules.utils import mine_negative_samples
+        from cmed.utils import mine_negative_samples
         negative_mine_file = FLAGS.ckpt+'_negative_matrix'
         if os.path.exists(negative_mine_file):
-            negative_matrix = torch.load(negative_mine_file)
+            negative_matrix = torch.load(negative_mine_file, map_location='cpu')
         else:
-            checkpoint = torch.load(FLAGS.ckpt)
-            weights = torch.load(FLAGS.ckpt)
+            weights = torch.load(FLAGS.ckpt, map_location='cpu')
             state_dict = weights['state_dict']
             new_state_dict = {}
             for key, tensor in state_dict.items():

@@ -5,9 +5,45 @@ import torch
 import numpy as np
 from torch import nn
 
-from matplotlib import pyplot as plt
-import seaborn as sns
 from torch.nn.utils.rnn import pad_sequence
+
+
+def load_kg_embeddings(embedding_weight_path):
+    try:
+        from cmed.kgs.models import TransE, DistMult, TransAttnE
+    except:
+        from CMED.cmed.kgs.models import DistMult
+    checkpoint = torch.load(embedding_weight_path, map_location='cpu')['state_dict']
+    if 'model.ent_embeddings.weight' in checkpoint:
+        entity_embedding = checkpoint['model.ent_embeddings.weight']
+        relation_embedding = checkpoint['model.rel_embeddings.weight']
+        type_embedding = checkpoint['model.type_embeddings.weight']
+    else:
+        entity_embedding = checkpoint['ent_embeddings.weight']
+        relation_embedding = checkpoint['rel_embeddings.weight']
+        type_embedding = checkpoint['type_embeddings.weight']
+    type_vocab_size, hidden_dim = type_embedding.shape
+    relation_vocab_size, hidden_dim = relation_embedding.shape
+    entity_vocab_size = entity_embedding.shape[0]
+
+    transe = TransAttnE(entity_vocab_size+2, relation_vocab_size, type_vocab_size, hidden_dim)
+
+    updated_checkpoint = transe.state_dict()
+
+    for key, tensor in checkpoint.items():
+        if 'criterion' in key:
+            continue
+
+        real_key = key.replace('model.', '')
+        if 'embedding' in real_key:
+            vocab, test = tensor.shape
+            updated_checkpoint[real_key][:vocab, :test] = tensor
+        else:
+            updated_checkpoint[real_key] = tensor
+
+    transe.load_state_dict(updated_checkpoint)
+    return transe, entity_vocab_size, relation_vocab_size, type_vocab_size, hidden_dim
+
 
 
 def negsamp_vectorized_bsearch(pos_inds, n_items, n_samp=32, items=None):
@@ -40,6 +76,10 @@ def multidimensional_shifting(num_samples, sample_size, probabilities):
     return np.argpartition(shifted_probabilities, sample_size, axis=1)[:, :sample_size]
 
 def gen_plot(inputs, model, text_tokens):
+    from matplotlib import pyplot as plt
+    import seaborn as sns
+
+
     results = model(**inputs, 
                 return_dict=True, 
                 output_hidden_states=True, 

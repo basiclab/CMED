@@ -22,7 +22,7 @@ def replace_kg(entity2type, entity2subject, entity2id, relation2id, type2id, kg_
     return kg_model
 
 if __name__ == "__main__":
-    from modules.kge_models import TransAttnE, TransE
+    from cmed.kgs.models import TransAttnE, TransE
 
     entity2id, relation2id, type2id = torch.load('.cache/ntee_2014/entity2id.pt'),    \
         torch.load('.cache/ntee_2014/rel2id.pt'), \

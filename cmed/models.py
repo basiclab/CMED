@@ -10,7 +10,7 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 from transformers.activations import ACT2FN
 from .lm_models import BertLayer, BertEmbeddings
-from .kg.models import TransE, TransAttnE, DistMult, diversity_regularization, pairwise_diversity_regularization
+from .kgs.models import TransE, TransAttnE, DistMult, diversity_regularization, pairwise_diversity_regularization
 import random
 from transformers.modeling_outputs import (
     BaseModelOutput,

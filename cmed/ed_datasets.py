@@ -4,7 +4,7 @@ import numpy as np
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, NewType, Tuple, Optional
 import torch
-from modules.dataset import RDF_SUBJECT_NAME, RDF_TYPE_NAME
+
 from .utils import multidimensional_shifting, negsamp_vectorized_bsearch
 from h5record import H5Dataset, Sequence
 
@@ -37,7 +37,8 @@ def make_boolean_matrix(input_kgs):
 
 class WikiDataset(Dataset):
 
-    def __init__(self, h5_file, cache_path, tokenizer):
+    def __init__(self, h5_file, cache_path, tokenizer, 
+        ent_pad_token_id=0, type_sample_size=10, max_type_ids=97126):
         schema = (
             Sequence('input_ids'),
             Sequence('input_kgs'),
@@ -45,13 +46,23 @@ class WikiDataset(Dataset):
             Sequence('attention_mask')
         )
         #   tokenizer.knowledgraph.entity_relations
-        self.entity_mapping = training_triplets
+        self.type_sample_size = type_sample_size
+        self.max_type_ids = max_type_ids
+        self.vocab_size = len(tokenizer)
+
+        self.rel2id = torch.load(os.path.join(cache_path, 'rel2id.pt'))
+        ent2id = torch.load(os.path.join(cache_path, 'rel2id.pt'))
+
+        self.subject_rel_id = self.rel2id[RDF_SUBJECT_NAME]
+        self.type_rel_id = self.rel2id[RDF_TYPE_NAME]
 
         self.entity2subject = torch.load(os.path.join(cache_path, 'entity2subject.pt'))
         self.entity2type = torch.load(os.path.join(cache_path, 'entity2types.pt'))
-        self.ent_pad_token_id = tokenizer.ent_pad_token_id
+        self.entity_mapping = torch.load(os.path.join(cache_path, 'triplets_map.pt'))
 
-        self.data = H5Dataset(schema, h5_file)
+        self.ent_pad_token_id = len(ent2id)-1
+
+        self.data = H5Dataset(schema, h5_file, multiprocess=True)
 
     def add_types_relations(self, kg_id):
         subject_types = self.entity2subject[kg_id]
@@ -117,6 +128,9 @@ class WikiDataset(Dataset):
 
     def __len__(self):
         return len(self.data)
+
+
+
 
 
 class ED_Collate():
@@ -227,25 +241,36 @@ def split_data(sentence_text, entity_range, entity_label, labels):
 
 if __name__ == "__main__":
     import torch
-    from modules.kg.utils import generic_data_collate
     from transformers import AutoTokenizer
+    from .batch_fn import KG_DataCollatorForLanguageModeling
+
+    # from modules.kg.utils import generic_data_collate
     from torch.utils.data import DataLoader
-    from modules.pipelines import PostProcess, Preprocess, load_index2mapping
-    entity2id = torch.load('.cache/dbpediav2-s2/entity2id.pt')
-    rel2id = torch.load('.cache/dbpediav2-s2/rel2id.pt')
+    # from modules.pipelines import PostProcess, Preprocess, load_index2mapping
+    # entity2id = torch.load('.cache/dbpediav2-s2/entity2id.pt')
+    # rel2id = torch.load('.cache/dbpediav2-s2/rel2id.pt')
 
-    text_tokenizer = AutoTokenizer.from_pretrained('roberta-base')
-    sqlite_path = "../wiki_2020/generated"
+    tokenizer = AutoTokenizer.from_pretrained('roberta-base')
 
-    preprocess = Preprocess(sqlite_path, entity2id, text_tokenizer)
+    # sqlite_path = "../wiki_2020/generated"
+
+    # preprocess = Preprocess(sqlite_path, entity2id, text_tokenizer)
 
     
-    data_collate_fn = generic_data_collate(text_tokenizer)
-    ed_data_collate = ED_Collate(preprocess, data_collate_fn, output_kg_ids=True)
+    # data_collate_fn = generic_data_collate(text_tokenizer)
+    # ed_data_collate = ED_Collate(preprocess, data_collate_fn, output_kg_ids=True)
     # AIDA_Conll('../KGERT-v2/datasets/conll2003-el/dev.txt.tmp', entity2id=entity2id, rel2id=rel2id, tokenizer=text_tokenizer)
-    dataset = AIDA_Conll('../KGERT-v2/datasets/conll2003-el/dev.txt', max_token_size=470,
-        entity2id=entity2id, tokenizer=text_tokenizer, rel2id=rel2id, is_train=True)
+    collate_fn = KG_DataCollatorForLanguageModeling(tokenizer, tokenizer_name='roberta-base')
+    dataset = WikiDataset('../fast-transformer/cache/wiki_roberta-base3274405_2603.h5'
+        ,'../fast-transformer/.cache/ntee_2014/'
+        ,tokenizer)
+
     print(dataset[0])
+    from tqdm import tqdm
+    dataloader = DataLoader(dataset, batch_size=64, collate_fn=collate_fn, shuffle=True, num_workers=10)
+    for batch in tqdm(dataloader):
+        batch
+
     # AIDA_Conll('../KGERT-v2/datasets/conll2003-el/test.txt.tmp', entity2id=entity2id, rel2id=rel2id, tokenizer=text_tokenizer)
     # dataloader = DataLoader(dataset, batch_size=24, collate_fn=ed_data_collate, shuffle=False)
 

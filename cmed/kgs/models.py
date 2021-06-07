@@ -449,8 +449,8 @@ class TransAttnE(nn.Module):
 
         h_embed = self.ent_embeddings(h)
         r_embed = self.rel_embeddings(r)
-        neg_h_embed = self.ent_embeddings(neg_h)
 
+        neg_h_embed = self.ent_embeddings(neg_h)
         neg_t_types_emb = self.type_embeddings(neg_t_types) #/ math.sqrt(self.hidden_size)
 
         t_types_ = self.aggregate(h_embed, r_embed, t_types_emb)
