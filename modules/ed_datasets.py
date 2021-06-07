@@ -6,6 +6,118 @@ from typing import Any, Callable, Dict, List, NewType, Tuple, Optional
 import torch
 from modules.dataset import RDF_SUBJECT_NAME, RDF_TYPE_NAME
 from .utils import multidimensional_shifting, negsamp_vectorized_bsearch
+from h5record import H5Dataset, Sequence
+
+RDF_SUBJECT_NAME = 'http://purl.org/dc/terms/subject'
+RDF_TYPE_NAME = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'
+
+
+def make_boolean_matrix(input_kgs):
+    input_kgs = np.array(input_kgs)
+    seq_len = len(input_kgs)
+    position_idx = []
+    kg_idx = []
+    prev_id = -1
+    for idx, kg_id in enumerate(input_kgs):
+        if kg_id != -1 and kg_id != prev_id:
+            kg_idx.append(kg_id)
+            position_idx.append(idx)
+        prev_id = kg_id
+
+    boolean_matrix = [ [] ]*len(position_idx)
+
+    for idx, kg_id in enumerate(kg_idx):
+        zeros = np.zeros(seq_len)
+        mask = (input_kgs == kg_id)
+        weight = 1 / mask.sum()
+        zeros[mask] = weight
+        boolean_matrix[idx] = zeros
+    return kg_idx, np.array(boolean_matrix)
+
+
+class WikiDataset(Dataset):
+
+    def __init__(self, h5_file, cache_path, tokenizer):
+        schema = (
+            Sequence('input_ids'),
+            Sequence('input_kgs'),
+            Sequence('has_ent_ids'),
+            Sequence('attention_mask')
+        )
+        #   tokenizer.knowledgraph.entity_relations
+        self.entity_mapping = training_triplets
+
+        self.entity2subject = torch.load(os.path.join(cache_path, 'entity2subject.pt'))
+        self.entity2type = torch.load(os.path.join(cache_path, 'entity2types.pt'))
+        self.ent_pad_token_id = tokenizer.ent_pad_token_id
+
+        self.data = H5Dataset(schema, h5_file)
+
+    def add_types_relations(self, kg_id):
+        subject_types = self.entity2subject[kg_id]
+        subject_size = len(subject_types)
+        if subject_size > self.type_sample_size:
+            subject_types = self.entity2subject[kg_id][multidimensional_shifting(subject_size, 1, np.ones(subject_size)/subject_size).flatten()[:self.type_sample_size]]
+        else:
+            if len(subject_types) < self.type_sample_size:
+                subject_types = np.pad(subject_types, (0, self.type_sample_size-len(subject_types)), 'constant',constant_values=(self.max_type_ids))
+
+        rdf_types = self.entity2type[kg_id].copy()
+        rdf_size = len(rdf_types)
+
+        if rdf_size  > self.type_sample_size:
+            rdf_types = self.entity2type[kg_id][multidimensional_shifting(rdf_size, 1, np.ones(rdf_size)/rdf_size).flatten()[:self.type_sample_size]]
+        else:
+            if len(rdf_types) < self.type_sample_size:
+                rdf_types = np.pad(rdf_types, (0, self.type_sample_size-len(rdf_types)), 'constant',constant_values=(self.max_type_ids))
+
+        return rdf_types, subject_types
+
+    def __getitem__(self, idx):
+        row = self.data[idx]
+
+        output = {}
+        for key, value in row.items():
+            output[key] = value[0]
+        output['kg_ids'], output['kg_boolean_matrix'] = make_boolean_matrix(output['input_kgs'])
+        tail_ids, rel_ids = [], []
+        subjects, types = [], []
+
+        for kg_idx in output['kg_ids']:
+            if kg_idx != self.ent_pad_token_id and kg_idx in self.entity_mapping and len(self.entity_mapping[kg_idx]) > 0:
+                rel_id =  np.random.choice(list(self.entity_mapping[kg_idx].keys()))
+                tail_id =  np.random.choice(self.entity_mapping[kg_idx][rel_id])
+                tail_ids.append(tail_id)
+                rel_ids.append(rel_id)
+                type_type, subject  = self.add_types_relations(kg_idx)
+                subjects.append(subject)
+                types.append(type_type)
+
+            else:
+                tail_ids.append(self.ent_pad_token_id)
+                rel_ids.append(self.ent_pad_token_id)
+                subjects.append(np.zeros(self.type_sample_size))
+                types.append(np.zeros(self.type_sample_size))
+
+        output['subjects'] = np.array(subjects)
+        output['types'] = np.array(types)
+
+        output['tail_labels'] = np.array(tail_ids)
+        output['rel_labels'] = np.array(rel_ids)
+        output['seq_len'] = len(output['kg_ids'])
+        output['kg_attention_mask'] = [1]*len(output['kg_ids'])
+
+        output['subject_rel'] = [self.subject_rel_id] *len(output['kg_ids'])
+        output['type_rel'] = [self.type_rel_id] *len(output['kg_ids'])
+
+        output.pop('has_ent_ids', None)
+        output.pop('input_kgs', None)
+        assert max(output['input_ids']) < self.vocab_size
+        return output    
+
+    def __len__(self):
+        return len(self.data)
+
 
 class ED_Collate():
 

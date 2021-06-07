@@ -1,7 +1,7 @@
 import torch.nn.functional as F
 import numpy as np
 import torch
-from .dataset import make_boolean_matrix
+from .ed_dataset import make_boolean_matrix
 from .kgs.utils import _calc
 
 def mse_loss_fn(x, y):

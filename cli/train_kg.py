@@ -134,21 +134,6 @@ def load_dataset_config(dataset_name):
         valid_dataset = SPO('kgs/dev_CnDbpedia_mid.spo', 'cnhownet', train=False)
         return train_dataset, valid_dataset, None
 
-    elif dataset_name == 'fb15k':
-        train_dataset = FB15k('kgs/FB15K/train.txt', 'train')
-        test_dataset = FB15k('kgs/FB15K/test.txt', 'test', merge_entity_id=True)
-        valid_dataset = FB15k('kgs/FB15K/valid.txt', 'valid', merge_entity_id=True)
-        return train_dataset, valid_dataset, test_dataset
-    elif dataset_name == 'fb15k-237':
-        train_dataset = FB15k('kgs/FB15k-237/train.txt', 'train')
-        test_dataset = FB15k('kgs/FB15k-237/test.txt', 'test', merge_entity_id=True)
-        valid_dataset = FB15k('kgs/FB15k-237/valid.txt', 'valid', merge_entity_id=True)
-        return train_dataset, valid_dataset, test_dataset
-    elif dataset_name == 'wn18rr':
-        train_dataset = WN18RR('kgs/WN18RR/train.txt', 'train')
-        test_dataset = WN18RR('kgs/WN18RR/test.txt', 'test', merge_entity_id=True)
-        valid_dataset = WN18RR('kgs/WN18RR/valid.txt', 'valid', merge_entity_id=True)
-        return train_dataset, valid_dataset, test_dataset
     elif dataset_name == 'dbpediav2-snapshot1':
         print('load dbpedia v2')
         train_dataset = Dbpedia('kgs/Dbpedia-snapshot1-v3/train.txt', 'train', datasetname='dbpediav2-s2')
