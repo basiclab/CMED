@@ -27,7 +27,6 @@ import numpy as np
 from cmed.config import FastKGBertConfig
 from cmed.models import EntityDisambiguation
 from cmed.optimizer import Lamb
-
 from cmed.batch_fn import KG_DataCollatorForLanguageModeling
 
 
@@ -179,7 +178,7 @@ if __name__ == '__main__':
     dbpedia_dataset = Dbpedia(
         os.path.join(FLAGS.kg_filename_path,'train.txt'), 'train', datasetname='ntee_2014')
     looper = infiniteloop( DataLoader(dbpedia_dataset, batch_size=FLAGS.kg_batch_size,
-        num_workers=10, shuffle=True), to_cuda=True)
+        num_workers=FLAGS.num_workers, shuffle=True), to_cuda=True)
 
     total_epoch = int(FLAGS.total_iterations / len(train_loader)) + 20 # just to be safe
 

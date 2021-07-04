@@ -346,6 +346,11 @@ def init_linear(m):
         print('layer')
         m.weight.data.fill_(1.0)    
 
+def L2_loss_fn(x, y):
+    x = F.normalize(x, dim=-1, p=2)
+    y = F.normalize(y, dim=-1, p=2)
+    return (2 - 2 * (x * y).sum(dim=-1)).mean()
+
 class TransAttnE(nn.Module):
     def __init__(self, entity_vocab_size, relation_vocab_size, type_vocab_size ,hidden_size, p_norm=1, margin=1, ent_embeddings=None):
         super(TransAttnE, self).__init__()
@@ -384,7 +389,7 @@ class TransAttnE(nn.Module):
 
         self.criterion = MarginLoss(margin=margin)
         self.type_criterion = MarginLoss(margin=margin*3)
-        self.mse_criterion = nn.MSELoss()
+        self.mse_criterion = L2_loss_fn
         self.cosine = nn.CosineSimilarity(dim=1, eps=1e-8)
         self.sigmoid = nn.Sigmoid()
         self.bce_entropy = nn.BCELoss()

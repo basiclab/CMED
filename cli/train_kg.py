@@ -1,11 +1,11 @@
 import pytorch_lightning as pl
-from modules.kgs.dataset import Dbpedia
-from modules.kgs.models import TransE, DistMult, diversity_regularization, TransAttnE
-from modules.kgs.utils import evaluate_, evaluate_types
+from cmed.kgs.dataset import Dbpedia
+from cmed.kgs.models import TransE, DistMult, diversity_regularization, TransAttnE
+from cmed.kgs.utils import evaluate_, evaluate_types
 import torch
 import numpy as np
 import sys, os
-from modules.kg.config import FLAGS
+from cmed.kgs.config import FLAGS
 import torch.nn.functional as F
 from torch.optim.lr_scheduler import LambdaLR
 
@@ -159,7 +159,7 @@ def model_choice(model_name):
 
 
 if __name__ == "__main__":
-    from modules.utils import CheckpointEveryNSteps
+    from cmed.utils import CheckpointEveryNSteps
     # dataset = SPO('kgs/HowNet.spo', 'hownet')
     train_dataset, valid_dataset, test_dataset = load_dataset_config(FLAGS.name)
     train = torch.utils.data.DataLoader(train_dataset, batch_size=FLAGS.train_batch_size, 
@@ -187,10 +187,10 @@ if __name__ == "__main__":
         distributed_backend=FLAGS.backend,
         # precision=16,
         # amp_level='O3',
-        num_sanity_val_steps=5,
+        num_sanity_val_steps=100,
         accumulate_grad_batches=FLAGS.accum_batch,
         default_root_dir=FLAGS.output_dir,
-        check_val_every_n_epoch=10, 
+        check_val_every_n_epoch=5, 
         limit_val_batches=0.02, # limit_val_batches, val_percent_check
         callbacks=[
             CheckpointEveryNSteps(

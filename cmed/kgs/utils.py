@@ -191,7 +191,24 @@ def evaluate_(model, batch, hits_k=10):
         # triplets = torch.stack((heads, relations, all_entities), dim=2).reshape(-1, 3)
         return hits_score, mrr_score, batch_size
 
+def negsamp_vectorized_bsearch(pos_inds, n_items, n_samp=32, items=None):
+    """ Guess and check vectorized
+    Assumes that we are allowed to potentially 
+    return less than n_samp samples
+    """
+    if items is not None:
+        raw_samps_idx = np.random.randint(0, len(items)-1, size=n_samp)
+        raw_samps = items[raw_samps_idx]
+    else:
+        raw_samps = np.random.randint(0, n_items, size=n_samp)
 
+
+    if len(pos_inds) > 0:
+        ss = np.searchsorted(pos_inds, raw_samps)
+        pos_mask = raw_samps == np.take(pos_inds, ss, mode='clip')
+        neg_inds = raw_samps[~pos_mask]
+        return neg_inds
+    return raw_samps
 
 
 def _calc(h, t, r, norm):

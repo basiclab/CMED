@@ -124,6 +124,33 @@ class EntityFlow(BertPreTrainedModel):
         )
 
 
+class ZeroShotEntityDisambiguation(BertPreTrainedModel):
+    def __init__(self, config, negative_matrix=None, w_kg=True, w_mlm=True):
+        super().__init__(config)
+        self.entity_decoder = EntityFlow(config)
+        self.neg_window_size = 10
+        self.w_kg = w_kg
+        self.w_mlm = w_mlm
+        self.bert = BertModel(config)
+        if 'roberta' in config.pretrained_name:
+            self.cls = RobertaLMHead(config)
+        else:
+            self.cls = BertOnlyMLMHead(config)
+        self.kg_upsample = nn.Linear(config.kg_hidden_size, config.hidden_size)
+        self.kg_downsample = nn.Sequential(
+                nn.Linear(config.hidden_size, config.hidden_size*3),
+                nn.LayerNorm(config.hidden_size*3),
+                nn.GELU(),
+                nn.Linear(config.hidden_size*3, config.kg_hidden_size),
+        )
+        self.ctx_proj = EntityProjection(config.hidden_size, config.kg_hidden_size)
+        self.loss_margin_rank = nn.MarginRankingLoss(1, reduction='none')
+        self.knowledge_model = TransAttnE(config.ent_vocab_size, 
+            config.rel_vocab_size, 
+            config.type_ent_vocab_size,
+            config.kg_hidden_size)
+        self.init_weights()
+
 
 
 class EntityDisambiguation(BertPreTrainedModel):
