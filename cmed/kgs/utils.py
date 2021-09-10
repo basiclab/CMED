@@ -3,6 +3,9 @@ import torch
 import numpy as np
 import torch.nn.functional as F
 import math
+from dataclasses import dataclass
+from torch.nn.utils.rnn import pad_sequence
+from typing import Any, Callable, Dict, List, NewType, Tuple, Optional
 
 
 def diversity_regularization(x):
@@ -11,7 +14,24 @@ def diversity_regularization(x):
 
     return torch.cdist(x, y, p=2).mean()
 
+def _tensorize_boolean_matrix( boolean_matrix, max_seq, max_kg):
+    bool_matrixes = []
+    for bool_matrix in boolean_matrix:
+        kg_len, seq_len = bool_matrix.shape
 
+        if (max_kg - kg_len) < 0:
+            print(bool_matrix[-2])
+            print(bool_matrix[-1])
+        if (max_seq - seq_len) > 0:
+            # append at sequence dimension 1
+            bool_matrix = torch.cat( [ bool_matrix, torch.zeros(( kg_len, max_seq-seq_len )) ], 1)
+
+        if (max_kg - kg_len) > 0: # append at kg dimension
+            bool_matrix = torch.cat([ bool_matrix, torch.zeros( max_kg - kg_len, max_seq ) ], 0)
+
+        bool_matrixes.append(bool_matrix)
+
+    return torch.stack(bool_matrixes).float()
 
 def evaluate(model, batch, t, hit_k=10):
     triplet, _ = batch
@@ -238,3 +258,56 @@ def evaluate(h, t, r, norm, entity_emb, relation_emb):
         if score <= gold_score:
             h_rank += 1
     return t_rank, h_rank
+
+
+def _tensorize_batch( examples: List[torch.Tensor], pad_token_id=-1) -> torch.Tensor:
+    length_of_first = examples[0].size(0)
+    are_tensors_same_length = all(x.size(0) == length_of_first for x in examples)
+    if are_tensors_same_length:
+        return torch.stack(examples, dim=0)
+    else:
+        return pad_sequence(examples, batch_first=True, padding_value=pad_token_id)
+
+
+def generic_data_collate(tokenizer, ent_mask_token=386690, ent_pad_token=386691):
+
+    def data_collate( batch: Dict, ignore_keys = ['kg_boolean_matrix', 'token_type_ids'] ):
+
+        examples = {key: []  for key in batch[0].keys() if key not in ignore_keys }
+        
+        boolean_matrix = []
+        for idx in range(len(batch)):
+            for key in examples.keys():
+                examples[key].append(torch.from_numpy(np.array(batch[idx][key])).long() )
+            boolean_matrix.append(torch.from_numpy(batch[idx]['kg_boolean_matrix'] ).float())
+        examples['input_ids'] = _tensorize_batch(examples['input_ids'], tokenizer.pad_token_id)
+        examples['kg_inputs'] = _tensorize_batch(examples['kg_inputs'], ent_pad_token)
+
+        examples['attention_mask'] = _tensorize_batch(examples['attention_mask'], 0)
+        examples['kg_attention_mask'] = _tensorize_batch(examples['kg_attention_mask'], 0)
+        examples['kg_boolean_matrix'] = _tensorize_boolean_matrix(boolean_matrix, 
+            examples['input_ids'].shape[1], examples['kg_attention_mask'].shape[1] )
+
+        if 'token_type_ids' in examples:
+            examples.pop('token_type_ids')
+        if 'token_type_ids' in examples:
+            examples['token_type_ids'] = _tensorize_batch(examples['token_type_ids'], 0)
+
+        bs, max_len = examples['kg_inputs'].shape
+
+        if 'kg_ids' in examples:
+            examples['kg_ids'] = _tensorize_batch(examples['kg_ids'], -100)
+        
+        if 'subjects' in examples:
+            examples['subjects'] = _tensorize_types(examples['subjects'], max_len)
+            examples['types'] = _tensorize_types(examples['types'], max_len)
+            examples['subject_rel'] = _tensorize_batch(examples['subject_rel'], -100)
+            examples['type_rel'] = _tensorize_batch(examples['type_rel'], -100)
+
+        if 'neg_subjects' in examples:
+            examples['neg_subjects'] = _tensorize_types(examples['neg_subjects'], max_len)
+            examples['neg_types'] = _tensorize_types(examples['neg_types'], max_len)
+
+        return examples
+
+    return data_collate

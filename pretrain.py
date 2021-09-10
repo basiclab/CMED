@@ -275,6 +275,7 @@ if __name__ == '__main__':
         resume_from_checkpoint=FLAGS.ckpt if FLAGS.ckpt and len(FLAGS.ckpt) > 0 else None,
         gpus=FLAGS.num_gpus, max_epochs=total_epoch, 
         distributed_backend=distributed_backend, 
+        #plugins='apex_amp',
         checkpoint_callback=checkpoint_callback,
         accumulate_grad_batches=FLAGS.grad_accumulation,
         precision= 16 if FLAGS.use_amp else 32,

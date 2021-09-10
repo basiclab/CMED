@@ -244,7 +244,7 @@ if __name__ == "__main__":
     from transformers import AutoTokenizer
     from .batch_fn import KG_DataCollatorForLanguageModeling
 
-    # from modules.kg.utils import generic_data_collate
+    # from modules.kgs.utils import generic_data_collate
     from torch.utils.data import DataLoader
     # from modules.pipelines import PostProcess, Preprocess, load_index2mapping
     # entity2id = torch.load('.cache/dbpediav2-s2/entity2id.pt')

@@ -11,12 +11,12 @@ import torch.nn.functional as F
 
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 
-from modules.models import EntityDisambiguation
-from modules.config import FastKGBertConfig
-from modules.ed_datasets import ED_Collate
-from modules.gen_dataset import LUKE_Dataset, PicklePreprocess
-from modules.kg.utils import generic_data_collate
-from modules.kgs.dataset import infiniteloop, Dbpedia
+from cmed.models import EntityDisambiguation
+from cmed.config import FastKGBertConfig
+from cmed.ed_datasets import ED_Collate
+from cmed.gen_dataset import LUKE_Dataset, PicklePreprocess
+from cmed.kgs.utils import generic_data_collate
+from cmed.kgs.dataset import infiniteloop, Dbpedia
 
 from .utils import replace_kg
 import argparse
