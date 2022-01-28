@@ -1,11 +1,10 @@
-import torch
-import torch.nn as nn
-from torch.utils.data import Dataset
 from collections import defaultdict
 import random
 import os
+import torch
+from torch.utils.data import Dataset
 import numpy as np
-from .utils import negsamp_vectorized_bsearch
+from cmed.utils import negsamp_vectorized_bsearch
 
 class KGTriplet(Dataset):
     def __init__(self, filename, session, cache='.cache'):

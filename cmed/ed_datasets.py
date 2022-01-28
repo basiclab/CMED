@@ -1,12 +1,11 @@
-import os, glob
+import os
+from dataclasses import dataclass
+import torch
 from torch.utils.data.dataset import Dataset
 import numpy as np
-from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, NewType, Tuple, Optional
-import torch
-
-from .utils import multidimensional_shifting, negsamp_vectorized_bsearch
+from typing import Any, Callable, Dict, List, NewType, Tuple
 from h5record import H5Dataset, Sequence
+from cmed.utils import multidimensional_shifting
 
 RDF_SUBJECT_NAME = 'http://purl.org/dc/terms/subject'
 RDF_TYPE_NAME = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'

@@ -1,21 +1,20 @@
-import os, glob
+import os
+import json
+import pickle
+from collections import OrderedDict
 from torch.utils.data.dataset import Dataset
 import numpy as np
-from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, NewType, Tuple, Optional
 import torch
-import json
 from tqdm import tqdm
 
 RDF_SUBJECT_NAME = 'http://purl.org/dc/terms/subject'
 RDF_TYPE_NAME = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'
 
-from .utils import multidimensional_shifting, negsamp_vectorized_bsearch
-from .ed_datasets import ED_Collate,make_boolean_matrix
+from cmed.utils import multidimensional_shifting, negsamp_vectorized_bsearch
+from cmed.ed_datasets import ED_Collate,make_boolean_matrix
 
 
-import pickle
-from collections import OrderedDict
 
 
 def conll_fix_entity2id():
@@ -753,11 +752,9 @@ class LUKE_Dataset(Dataset):
 
 
 if __name__ == "__main__":
-    import torch
-    from modules.kgs.utils import generic_data_collate
+    from cmed.kgs.utils import generic_data_collate
     from transformers import AutoTokenizer
     from torch.utils.data import DataLoader
-    from modules.pipelines import PostProcess
 
     text_tokenizer = AutoTokenizer.from_pretrained('roberta-base')
 

@@ -1,7 +1,8 @@
-from wikipedia2vec.dump_db import DumpDB
-from wikipedia2vec.utils.wiki_dump_reader import WikiDumpReader
 import argparse
 import multiprocessing
+
+from wikipedia2vec.dump_db import DumpDB
+from wikipedia2vec.utils.wiki_dump_reader import WikiDumpReader
 
 arg_parser = argparse.ArgumentParser(description='Finetune module')
 arg_parser.add_argument('--dump_file', type=str)

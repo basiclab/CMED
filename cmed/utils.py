@@ -5,8 +5,6 @@ import torch
 import numpy as np
 from torch import nn
 
-from torch.nn.utils.rnn import pad_sequence
-
 
 def load_kg_embeddings(embedding_weight_path):
     try:

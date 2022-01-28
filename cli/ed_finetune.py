@@ -18,7 +18,7 @@ from cmed.gen_dataset import LUKE_Dataset, PicklePreprocess
 from cmed.kgs.utils import generic_data_collate
 from cmed.kgs.dataset import infiniteloop, Dbpedia
 
-from .utils import replace_kg
+from cli.utils import replace_kg
 import argparse
 import json
 

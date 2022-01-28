@@ -1,13 +1,17 @@
+'''
+    Core trainer to pretrain knowledge graph embedding
+'''
 import pytorch_lightning as pl
-from cmed.kgs.dataset import Dbpedia
-from cmed.kgs.models import TransE, DistMult, diversity_regularization, TransAttnE
-from cmed.kgs.utils import evaluate_, evaluate_types
 import torch
 import numpy as np
 import sys, os
-from cmed.kgs.config import FLAGS
 import torch.nn.functional as F
 from torch.optim.lr_scheduler import LambdaLR
+
+from cmed.kgs.dataset import Dbpedia
+from cmed.kgs.models import TransE, DistMult, diversity_regularization, TransAttnE
+from cmed.kgs.utils import evaluate_, evaluate_types
+from cmed.kgs.config import FLAGS
 
 FLAGS(sys.argv)
 

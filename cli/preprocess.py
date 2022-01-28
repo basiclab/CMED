@@ -1,25 +1,16 @@
-import logging
-import os
-import pickle
-import time
-import torch
-from torch.utils.data.dataset import Dataset
-import numpy as np
-import h5py as h5
-import json
-from collections import defaultdict
-from multiprocessing import Pool, cpu_count, Queue, Process, Manager
-from tqdm import tqdm
-import os, pickle
-import glob
-import random
-import numpy as np
-from transformers import PreTrainedTokenizer, RobertaTokenizer
-from tqdm import tqdm
-from wikipedia2vec.dump_db import DumpDB
 import argparse
-
-from modules.luke_entity_vocab import EntityVocab
+import random
+import torch
+import argparse
+import re
+import numpy as np
+from multiprocessing import Pool, cpu_count
+from tqdm import tqdm
+import numpy as np
+from transformers import RobertaTokenizer
+from wikipedia2vec.dump_db import DumpDB
+from cmed.luke_entity_vocab import EntityVocab
+from cmed.constants import UNK_TOKEN
 
 # global variables used in pool workers
 _dump_db = _tokenizer = _sentence_tokenizer = _entity_vocab = _idx_entity = _max_num_tokens = _max_entity_length = None
@@ -143,7 +134,7 @@ def process_page(page_title):
                     else:
                         entity_title = _idx_entity[ent_id]
 
-                    if dbpedia_url in _entity_vocab:
+                    if entity_title in _entity_vocab:
                         fastent_idx = _entity_vocab[entity_title]
                         entity_position_idx = ent_pos[ent_pos != -1]
                         input_kgs[entity_position_idx] = fastent_idx

@@ -1,27 +1,18 @@
+import math
 from torch import nn
 from transformers.modeling_bert import BertSelfAttention, BertPreTrainedModel, BertOnlyMLMHead, BertOutput, BertForMaskedLM, BertPooler, BertEncoder, BertModel
 from transformers.modeling_roberta import RobertaLMHead, RobertaModel
 from axial_positional_embedding import AxialPositionalEmbedding
 import torch
-import math
 from functools import lru_cache
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss
 from torch.autograd import Variable
 import torch.nn.functional as F
 from transformers.activations import ACT2FN
-from .lm_models import BertLayer, BertEmbeddings
-from .kgs.models import TransE, TransAttnE, DistMult, diversity_regularization, pairwise_diversity_regularization
-import random
+from cmed.lm_models import BertLayer, BertEmbeddings
+from cmed.kgs.models import TransE, TransAttnE, DistMult, diversity_regularization, pairwise_diversity_regularization
 from transformers.modeling_outputs import (
-    BaseModelOutput,
-    BaseModelOutputWithPooling,
-    CausalLMOutput,
-    MaskedLMOutput,
-    MultipleChoiceModelOutput,
-    NextSentencePredictorOutput,
-    QuestionAnsweringModelOutput,
-    SequenceClassifierOutput,
-    TokenClassifierOutput,
+    BaseModelOutput
 )
 
 def default(val, default_val):
@@ -543,31 +534,3 @@ if __name__ == '__main__':
     # for sent in sentences:
     #     outputs.append(text_tokenizer(sent, max_length=22, padding='max_length' ))
 
-#     inputs = data_collator(outputs)
- 
-#     inputs['output_attentions'] = True
-#     outputs = model(**inputs)
-#     print(len(outputs))
-#     print(outputs[0].shape, len(outputs[2]))
-
-#     for idx in range(10):
-#         current = model.bert.encoder.stack_layer()
-#         print('total layer', current)
-
-#         outputs = model(**inputs)
-#         print(len(outputs))
-#         skip = 0
-#         for attent in outputs[2]:
-#             if attent == None:
-#                 skip += 1
-#         print(outputs[0].shape, skip)
-
-#     model.eval()
-
-#     outputs = model(**inputs)
-#     print(len(outputs))
-#     skip = 0
-#     for attent in outputs[2]:
-#         if attent == None:
-#             skip += 1
-#     print(outputs[0].shape, skip)

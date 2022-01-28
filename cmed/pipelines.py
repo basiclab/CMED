@@ -1,8 +1,8 @@
-import torch.nn.functional as F
 import numpy as np
 import torch
-from .ed_dataset import make_boolean_matrix
-from .kgs.utils import _calc
+import torch.nn.functional as F
+from cmed.ed_dataset import make_boolean_matrix
+from cmed.kgs.utils import _calc
 
 def mse_loss_fn(x, y):
     x = F.normalize(x, dim=-1, p=2)

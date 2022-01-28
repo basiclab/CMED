@@ -15,10 +15,9 @@
 """
 
 
-from typing import List, TextIO, Dict
+from typing import List, Dict
 import json
-import math
-from pathlib import Path
+
 
 import multiprocessing
 from collections import Counter, OrderedDict, defaultdict, namedtuple
@@ -26,6 +25,10 @@ from contextlib import closing
 from multiprocessing.pool import Pool
 from tqdm import tqdm
 from wikipedia2vec.dump_db import DumpDB
+from cmed.constants import PAD_TOKEN, UNK_TOKEN, MASK_TOKEN
+
+Entity = namedtuple("Entity", ["title", "language"])
+
 
 class EntityVocab(object):
     def __init__(self, vocab_file: str):

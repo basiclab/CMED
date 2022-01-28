@@ -7,7 +7,6 @@ from transformers.modeling_utils import (
     prune_linear_layer,
 )
 import torch
-import math
 from transformers.activations import ACT2FN
 
 def default(val, default_val):

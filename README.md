@@ -1,5 +1,13 @@
 # CMEM-KG : Condtional Masked Entity Disambiguation
 
+## Overview of entire setup process
+
+```
+(Prepare a list of knowledge graph ids)-[ extract knowledge graph from dbpedia ]->(  knowledge graph embeddings )
+                                                                                                  |
+                                                                                  (    )
+```
+
 ## Download required data
 
 Download data from here : 
