@@ -22,7 +22,7 @@ from cmed.pretrain_config import FLAGS, flags
 from cmed.utils import (
     CheckpointEveryNSteps, print_parameters, load_kg_embeddings
 )
-from cmed.kg_dataset import infiniteloop, Dbpedia
+from cmed.kgs.dataset import infiniteloop, Dbpedia
 import numpy as np
 from cmed.config import FastKGBertConfig
 from cmed.models import EntityDisambiguation

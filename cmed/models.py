@@ -1,16 +1,12 @@
+from functools import lru_cache
 import math
 from torch import nn
-from transformers.modeling_bert import BertSelfAttention, BertPreTrainedModel, BertOnlyMLMHead, BertOutput, BertForMaskedLM, BertPooler, BertEncoder, BertModel
+from transformers.modeling_bert import BertPreTrainedModel, BertOnlyMLMHead, BertEncoder, BertModel
 from transformers.modeling_roberta import RobertaLMHead, RobertaModel
 from axial_positional_embedding import AxialPositionalEmbedding
 import torch
-from functools import lru_cache
-from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss
-from torch.autograd import Variable
-import torch.nn.functional as F
-from transformers.activations import ACT2FN
-from cmed.lm_models import BertLayer, BertEmbeddings
-from cmed.kgs.models import TransE, TransAttnE, DistMult, diversity_regularization, pairwise_diversity_regularization
+from cmed.kgs.models import TransE, TransAttnE, DistMult
+from cmed.kgs.models import diversity_regularization, pairwise_diversity_regularization
 from transformers.modeling_outputs import (
     BaseModelOutput
 )

@@ -83,7 +83,7 @@ class EntityVocab(object):
     def __iter__(self):
         return iter(self.vocab)
 
-    def contains(self, title: str, language: str = None):
+    def contains(self, title: str, language: str = 'en'):
         return Entity(title, language) in self.vocab
 
     def get_id(self, title: str, language: str = None, default: int = None) -> int:
@@ -121,7 +121,7 @@ class EntityVocab(object):
         language: str,
     ):
         counter = Counter()
-        with tqdm(total=dump_db.page_size(), mininterval=0.5) as pbar:
+        with tqdm(total=dump_db.page_size(), mininterval=0.5, dynamic_ncols=True) as pbar:
             with closing(Pool(pool_size, initializer=EntityVocab._initialize_worker, initargs=(dump_db,))) as pool:
                 for ret in pool.imap_unordered(EntityVocab._count_entities, dump_db.titles(), chunksize=chunk_size):
                     counter.update(ret)
@@ -133,8 +133,8 @@ class EntityVocab(object):
         title_dict[MASK_TOKEN] = 0
 
         for title in white_list:
-            if counter[title] != 0:
-                title_dict[title] = counter[title]
+            if counter[title.lower()] != 0:
+                title_dict[title] = counter[title.lower()]
 
         if not white_list_only:
             valid_titles = frozenset(dump_db.titles())
@@ -160,5 +160,5 @@ class EntityVocab(object):
         for paragraph in _dump_db.get_paragraphs(title):
             for wiki_link in paragraph.wiki_links:
                 title = _dump_db.resolve_redirect(wiki_link.title)
-                counter[title] += 1
+                counter[title.lower()] += 1
         return counter

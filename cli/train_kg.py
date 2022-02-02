@@ -42,12 +42,13 @@ class KGTrainer(pl.LightningModule):
 
         if FLAGS.l2 > 0:
             loss += self.model.regularization(pos_triplets) * FLAGS.l2
-
+        tensorboard_logs = {}
         if FLAGS.self_regul > 0:
             self_regularization = self.model.self_regularization()
             loss = loss + self_regularization * FLAGS.self_regul
+            tensorboard_logs['self_regularization'] = self_regularization
 
-        tensorboard_logs = { 'loss': loss, 'self_regularization': self_regularization,  }
+        tensorboard_logs['loss'] = loss
 
         if FLAGS.mean_loss:
             tensorboard_logs['loss/diversity_penalty'] = type_triplet_loss
@@ -149,6 +150,12 @@ def load_dataset_config(dataset_name):
         test_dataset = Dbpedia('kgs/ntee/test.txt', 'test', datasetname='ntee_2014', merge_entity_id=True)
         valid_dataset = Dbpedia('kgs/ntee/valid.txt', 'valid', datasetname='ntee_2014', merge_entity_id=True)
         return train_dataset, valid_dataset, test_dataset
+    else:
+        train_dataset = Dbpedia(dataset_name+'train.txt', 'train', datasetname='ntee_2014', merge_entity_id=True)
+        test_dataset = Dbpedia(dataset_name+'test.txt', 'test', datasetname='ntee_2014', merge_entity_id=True)
+        valid_dataset = Dbpedia(dataset_name+'valid.txt', 'valid', datasetname='ntee_2014', merge_entity_id=True)
+        return train_dataset, valid_dataset, test_dataset
+
 
 
 def model_choice(model_name):

@@ -5,7 +5,7 @@
 ```
 (Prepare a list of knowledge graph ids)-[ extract knowledge graph from dbpedia ]->(  knowledge graph embeddings )
                                                                                                   |
-                                                                                  (    )
+                                                                                  (   Start pretraining process )
 ```
 
 ## Download required data
@@ -38,10 +38,10 @@ pip install -r requirements.txt
 Convert Wikipedia dump into preprocessed files
 
 ```
-python -m cli.dump --dump_file [Wikipedia Dump] --out_file [Output file].db
+python -m cli.dump --dump_file enwiki-20220120-pages-articles-multistream.xml.bz2 --out_file roberta.db
 ```
 
-Convert preprocessed files into our pretraining data format
+Convert preprocessed wikipedia into our pretraining data format
 
 ```
 python -m cli.preprocess --dump_db [Wikipedia Dump] \
@@ -50,23 +50,50 @@ python -m cli.preprocess --dump_db [Wikipedia Dump] \
     --output [Dataset output name] <- place this in a cache file
 ```
 
-### Start pretraining
+Optional : you can also append dataset from Facebook to improve its performance
+
+
+
+### Start training
+
+1. Knowledge graph pretraining
+
+```
+python -m cli.train_kg \
+    --flagfile ./resources/kg_training_params.txt \
+    --name <path to knowledge graph triplets text> \
+    --model_name transe \
+    --output_dir <knowledge graph model output path>
+```
+
+If you use the provided data sample (data.zip), you should be able to locate the triplet training files under *data/kgs/ntee/*
+
+
+After training these embeddings you should be able to locate weights under <knowledge graph model output path>/lightning_logs/version_0/checkpoints/
+
+```
+<knowledge graph model output path>
+    |- lightning_logs
+            |- version_0
+                    |- checkpoints
+```
+
+2. Entity disambiguation training
 
 For more hyper parameters please refer to train.txt
 
 ```
 python pretrain.py  \
-    --flagfile train.txt \
+    --flagfile resource/train_params.txt \
     --datasets= [Dataset output name] \
     --num_gpus=3 \
-    --kg_pretrained_path=ntee_transattn/lightning_logs/version_0/checkpoints/step_checkpoint_44_105000.ckpt
+    --kg_pretrained_path=<pretrain weights from step 1>
 ```
 
 
 ### Finetuning from checkpoint
 
-
-Use eval.sh for easy testing ( run finetuning in seeds 1,2,3,4 )
+Using eval.sh for easy testing ( run finetuning in seeds 1,2,3,4 )
 
 ```
      python -m cli.ed_finetune \

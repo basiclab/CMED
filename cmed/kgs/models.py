@@ -536,8 +536,7 @@ class TransAttnE(nn.Module):
 
 if __name__ == '__main__':
     from torch.utils.data import DataLoader
-
-    from modules.kg_dataset import Dbpedia
+    from cmed.kgs.dataset import Dbpedia
 
     test_dataset = Dbpedia('kgs/ntee/test.txt', 'test', datasetname='ntee_2014', merge_entity_id=True)
     dataloader = DataLoader(test_dataset, batch_size=8, shuffle=True)

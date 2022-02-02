@@ -11,6 +11,7 @@ import torch.nn.functional as F
 
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 
+from cmed.constants import DBPEDIA_PREFIX
 from cmed.models import EntityDisambiguation
 from cmed.config import FastKGBertConfig
 from cmed.ed_datasets import ED_Collate
@@ -168,7 +169,7 @@ def benchmark_performance(model, dataloader, output_results=False):
                         scores = scores.cpu().detach().numpy()
                         pred = dbpedia_urls[np.argsort(-scores)][0]
 
-                        pred_postfix = pred.replace('<http://dbpedia.org/resource/','').replace('>', '')
+                        pred_postfix = pred.replace(DBPEDIA_PREFIX,'').replace('>', '')
                         result['pred'] = pred_postfix
                         results.append(result)
 

@@ -1,14 +1,16 @@
 import argparse
 import random
-import torch
 import argparse
+import itertools
 import re
 import numpy as np
 from multiprocessing import Pool, cpu_count
-from tqdm import tqdm
 import numpy as np
 from transformers import RobertaTokenizer
+from h5record import H5Dataset, Sequence
+from transformers import AutoTokenizer
 from wikipedia2vec.dump_db import DumpDB
+from cmed.sentence_tokenizer import SentenceTokenizer
 from cmed.luke_entity_vocab import EntityVocab
 from cmed.constants import UNK_TOKEN
 
@@ -22,11 +24,12 @@ arg_parser.add_argument('--dump_db', type=str)
 arg_parser.add_argument('--tokenizer', type=str)
 arg_parser.add_argument('--entity_vocab', type=str)
 arg_parser.add_argument('--output', type=str)
-
-
+arg_parser.add_argument('--sentence_tokenizer_name', type=str, default='en')
+arg_parser.add_argument('--pool', type=int, default=20)
+# min_sent_len
+arg_parser.add_argument('--min_sent_len', type=int, default=10)
 
 def process_page(page_title):
-
     if _entity_vocab.contains(page_title, _language):
         page_id = _entity_vocab.get_id(page_title, _language)
     else:
@@ -74,8 +77,10 @@ def process_page(page_title):
             for link_title, link_start, link_end in paragraph_links:
                 if not (sent_start <= link_start < sent_end and link_end <= sent_end):
                     continue
-                entity_id = _entity_vocab.get_id(link_title, _language)
 
+                entity_id = _entity_vocab.get_id(link_title, _language)
+                # if entity_id and entity_id > 2:
+                #     print(link_title,'found entity id', entity_id)
                 text = paragraph_text[cur:link_start]
                 if cur == 0 or text.startswith(" ") or paragraph_text[cur - 1] == " ":
                     sent_words += tokenize(text, True)
@@ -101,6 +106,7 @@ def process_page(page_title):
 
             if len(sent_words) < _min_sentence_length or len(sent_words) > _max_num_tokens:
                 continue
+
             sentences.append((sent_words, sent_links))
 
     ret = []
@@ -117,16 +123,14 @@ def process_page(page_title):
                 entity_ids = [id_ for id_, _, _, in links]
                 assert len(entity_ids) <= _max_entity_length
                 entity_position_ids = itertools.chain(
-                    *[
+                    [
                         (list(range(start, end)) + [-1] * (_max_mention_length - end + start))[:_max_mention_length]
                         for _, start, end in links
                     ]
                 )
-
                 input_kgs = np.array([-1]*len(word_ids))
                 has_ent_ids = np.array([0]*len(word_ids))
-                
-                for idx, ent_pos in enumerate(entity_position_ids):        
+                for idx, ent_pos in enumerate(entity_position_ids):
                     ent_id = entity_ids[idx]
                     if ent_id not in _idx_entity:
                         ent_pos = entity_position_ids[idx]
@@ -134,22 +138,23 @@ def process_page(page_title):
                     else:
                         entity_title = _idx_entity[ent_id]
 
-                    if entity_title in _entity_vocab:
+                    if entity_title in _entity_vocab and _entity_vocab[entity_title] is not None:
                         fastent_idx = _entity_vocab[entity_title]
                         entity_position_idx = ent_pos[ent_pos != -1]
                         input_kgs[entity_position_idx] = fastent_idx
                         has_ent_ids[entity_position_idx] = 1
+
                 doc = {
-                    'input_ids': word_ids, 
-                    'input_kgs': input_kgs, 
-                    'has_ent_ids': has_ent_ids, 
+                    'input_ids': np.array(word_ids),
+                    'input_kgs': input_kgs,
+                    'has_ent_ids': has_ent_ids,
                     'attention_mask': np.array([1]*len(word_ids))
                 }
+
                 ret.append(doc)
             words = []
             links = []
     return ret
-
 
 def init_global_args(dump_db: DumpDB,
         tokenizer,
@@ -165,7 +170,7 @@ def init_global_args(dump_db: DumpDB,
     ):
     global _dump_db, _tokenizer, _sentence_tokenizer, _entity_vocab, _max_num_tokens, _max_entity_length
     global _max_mention_length, _min_sentence_length, _include_sentences_without_entities, _include_unk_entities
-    global _language
+    global _language, _idx_entity
 
     _dump_db = dump_db
     _idx_entity = idx_entity
@@ -180,16 +185,22 @@ def init_global_args(dump_db: DumpDB,
     _include_unk_entities = include_unk_entities
     _language = dump_db.language
 
-def preprocess_dump(dump_db, tokenizer, entity_vocab, max_seq_length):
+def preprocess_dump(dump_db, tokenizer, entity_vocab,
+            sentence_tokenizer, idx_entity,
+            max_seq_length=420,
+            pool_size=20, max_entity_length=20,
+            max_mention_length=100, min_sentence_length=300,
+            chunk_size=2000,
+            include_sentences_without_entities=True,
+            include_unk_entities=True
+    ):
     target_titles = [
         title
         for title in dump_db.titles()
         if not (":" in title and title.lower().split(":")[0] in ("image", "file", "category"))
     ]
+    print('total titles: {}'.format(len(target_titles)))
     random.shuffle(target_titles)
-
-    if max_num_documents is not None:
-        target_titles = target_titles[:max_num_documents]
 
     max_num_tokens = max_seq_length - 2  # 2 for [CLS] and [SEP]
 
@@ -207,17 +218,21 @@ def preprocess_dump(dump_db, tokenizer, entity_vocab, max_seq_length):
         include_unk_entities,
     )
 
-
+    total_sent, empty_ret, inserted_sent = 0, 0, 0
     with Pool(pool_size, initializer=init_global_args, initargs=initargs) as pool:
         for ret in pool.imap(process_page, target_titles, chunksize=chunk_size):
+            if len(ret) == 0:
+                empty_ret += 1
             for sentence in ret:
+                total_sent += 1
                 if sentence['has_ent_ids'].sum() > 0:
+                    inserted_sent += 1
                     yield sentence
-
+                # else:
+                #     print('no results')
+    print("{} {}/{}".format(empty_ret, inserted_sent, total_sent))
 
 if __name__ == '__main__':
-    from h5record import H5Dataset, Sequence
-    from transformers import AutoTokenizer
 
     args = arg_parser.parse_args()
     output_file = args.output
@@ -227,15 +242,23 @@ if __name__ == '__main__':
 
     dump_db = DumpDB(args.dump_db)
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
-    entity_vocab = EntityVocab(args.entity_vocab)
 
+    sentence_tokenizer = SentenceTokenizer.from_name(args.sentence_tokenizer_name)
+    entity_vocab = EntityVocab(args.entity_vocab)
+    idx_entity = { idx: entity_title.title for entity_title, idx in entity_vocab.vocab.items() }
     schema = (
         Sequence('input_ids'),
         Sequence('input_kgs'),
         Sequence('has_ent_ids'),
         Sequence('attention_mask')
     )
-    generator = preprocess_dump( dump_db, tokenizer, entity_vocab)
+    generator = preprocess_dump( dump_db, tokenizer,
+        entity_vocab,
+        sentence_tokenizer,
+        idx_entity,
+        pool_size=args.pool,
+        min_sentence_length=args.min_sent_len
+    )
 
     dataset = H5Dataset(schema, output_file, generator)
     print('Total size ', len(dataset))

@@ -2,6 +2,9 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from cmed.ed_dataset import make_boolean_matrix
+from cmed.constants import (
+    DBPEDIA_RSC_PREFIX, DBPEDIA_SUBJECT_NAME, DBPEDIA_RDF_TYPE_NAME
+)
 from cmed.kgs.utils import _calc
 
 def mse_loss_fn(x, y):
@@ -142,7 +145,7 @@ class Preprocess():
         dbpedia_index, dbpedia_key, raw_output = [], [], []
         if p_e_m != None:
             for postfix, conf in p_e_m[:K]:
-                dbpedia_url = '<http://dbpedia.org/resource/{}>'.format(postfix)
+                dbpedia_url = DBPEDIA_RSC_PREFIX+'{}>'.format(postfix)
                 if dbpedia_url in self.dbpedia_entity2id:
                     dbpedia_key.append(dbpedia_url)
                     dbpedia_index.append(self.dbpedia_entity2id[dbpedia_url])
@@ -152,15 +155,15 @@ class Preprocess():
 
 class PostProcess():
 
-    SUBJECT_NAME = 'http://purl.org/dc/terms/subject'
-    RDF_TYPE_NAME = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'
+    SUBJECT_NAME = DBPEDIA_SUBJECT_NAME
+    RDF_TYPE_NAME = DBPEDIA_RDF_TYPE_NAME
 
     def __init__(self, embeddings, rel_embeddings, 
         ent_index, type_index, subject_index, 
-        entity2id, relation2id, entity_map):
+        entity2id, relation2id, **kwargs):
         '''
-
-            entity_map : reverse entity2id mapping, map index to original dbpedia link
+            kwargs:
+                entity_map : reverse entity2id mapping, map index to original dbpedia link
         '''
         self.subject_rel_idx = relation2id[self.SUBJECT_NAME]
         self.rdf_type_rel_idx = relation2id[self.RDF_TYPE_NAME]
