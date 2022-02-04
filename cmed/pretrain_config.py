@@ -25,7 +25,7 @@ flags.DEFINE_integer('embed_dim', 128, "embedding dimension")
 flags.DEFINE_string('tokenizer_base', 'bert-base-uncased', help='corpus path')
 
 flags.DEFINE_integer('num_layers', 12, "number of discriminator layers")
-flags.DEFINE_integer('hidden_dim', 256, "hidden dimension")
+flags.DEFINE_integer('hidden_dim', 768, "output hidden dimension of encoder")
 flags.DEFINE_integer('intermediate_size', 1024, "hidden dimension")
 flags.DEFINE_integer('heads', 4, "number of attention heads")
 

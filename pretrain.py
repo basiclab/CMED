@@ -35,7 +35,7 @@ flags.DEFINE_string('kg_pretrained_path', '', help='checkpoint name')
 flags.DEFINE_string('kg_filename_path', '', help='checkpoint name')
 flags.DEFINE_string('kg_data_path', '', help='checkpoint name')
 flags.DEFINE_string('kg_name', '', help='kg name')
-flags.DEFINE_string('pretrained_name', 'bert-base-cased', help='kg name')
+flags.DEFINE_string('pretrained_name', 'roberta-base', help='pretrain encoder name')
 
 flags.DEFINE_list('datasets', [''], help='kg name')
 
@@ -152,7 +152,7 @@ if __name__ == '__main__':
         f.write(FLAGS.flags_into_string().replace('\n', '  \n'))
 
 
-    text_tokenizer = AutoTokenizer.from_pretrained(FLAGS.tokenizer_base)
+    text_tokenizer = AutoTokenizer.from_pretrained(FLAGS.pretrained_name)
     print('tokenizer graph loaded!')
     kg_model, entity_vocab_size, relation_vocab_size, type_vocab_size, _  = load_kg_embeddings(FLAGS.kg_pretrained_path)
 
@@ -214,8 +214,8 @@ if __name__ == '__main__':
     )
     print('Train with KG ?', FLAGS.with_kg)
     model = EntityDisambiguation(bert_config, w_kg=FLAGS.with_kg)
-    if 'DKGE' in FLAGS.kg_pretrained_path:
-        model.knowledge_model = distmult
+    # if 'DKGE' in FLAGS.kg_pretrained_path:
+    #     model.knowledge_model = distmult
 
     pretrained_model = AutoModelForMaskedLM.from_pretrained(FLAGS.pretrained_name)
     model.bert = pretrained_model.roberta

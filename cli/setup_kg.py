@@ -138,47 +138,6 @@ def build_kg_from_output(key_list_file, json_output):
 
     return final_triplets
 
-def build_triplets_map():
-
-                    if len(line.strip().split('\t')) <= 1:
-                        continue
-                    head, relations, tail = line.strip().split('\t')
-                    if head not in self.entity2id or tail not in self.entity2id:
-                        continue
-
-                    if 'DKGE' in self.filename and 'snapshot1' in self.filename or 'dbpedia' in self.filename.lower():
-                        rels = [ relations ]
-                    else:
-                        rels = relations.split('/')
-
-                    for rel in rels:
-                        if len(rel) == 0:
-                            continue
-                        head_id = self.entity2id[head]
-                        rel_id = self.rel2id[rel]
-                        tail_id = self.entity2id[tail]
-
-                        if head_id not in entity_relations:
-                            entity_relations[head_id] = {}
-                        if tail_id not in entity_relations:
-                            entity_relations[tail_id] = {}
-                        
-                        if rel_id not in entity_relations[head_id]:
-                            entity_relations[head_id][rel_id] = []
-
-                        entity_relations[head_id][rel_id].append(tail_id)
-                        
-                        if rel_id not in entity_relations[tail_id]:
-                            entity_relations[tail_id][rel_id] = []
-
-                        entity_relations[tail_id][rel_id].append(head_id)
-
-        for head_id in entity_relations.keys():
-            for rel_id in entity_relations[head_id].keys():
-                entity_relations[head_id][rel_id] = list(set(entity_relations[head_id][rel_id]))
-
-        return entity_relations
-
 if __name__ == '__main__':
     args = parser.parse_args()
 

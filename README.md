@@ -96,9 +96,14 @@ Example
 python pretrain.py  \
     --flagfile resources/train_params.txt \
     --datasets=wikipedia.h5 \
-    --num_gpus=3 \
+    --num_gpus=4 \
     --kg_pretrained_path=outputs/kgs/lightning_logs/version_0/checkpoints/step_checkpoint_150_510000.ckpt \
-    --kg_cache_path .cache/ntee_2014
+    --kg_cache_path .cache/ntee_2014 \
+    --pretrained_name roberta-base \
+    --kg_hidden_size 300 \
+    --hidden_dim 768 \
+    --max_length 480 \
+    --batch_size 8
 
 ```
 

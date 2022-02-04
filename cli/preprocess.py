@@ -21,7 +21,7 @@ _max_mention_length = _min_sentence_length = _include_sentences_without_entities
 
 arg_parser = argparse.ArgumentParser(description='Convert wiki dump to HDF5')
 arg_parser.add_argument('--dump_db', type=str)
-arg_parser.add_argument('--tokenizer', type=str)
+arg_parser.add_argument('--tokenizer', type=str, default='roberta-base')
 arg_parser.add_argument('--entity_vocab', type=str)
 arg_parser.add_argument('--output', type=str)
 arg_parser.add_argument('--sentence_tokenizer_name', type=str, default='en')
