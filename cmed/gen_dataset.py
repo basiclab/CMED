@@ -532,7 +532,6 @@ def split_docs(data_name, document, entity2id, tokenizer, max_seq_length=412, mo
         all_tokens = [tokenizer.cls_token] + tokens[ctx_start:ctx_end] + [tokenizer.sep_token]
         texts = tokenizer.convert_tokens_to_string(all_tokens)
 
-        target_mention_data = []
         pos = []
         labels = []
         kg_ids = []

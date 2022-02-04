@@ -84,10 +84,22 @@ For more hyper parameters please refer to train.txt
 
 ```
 python pretrain.py  \
-    --flagfile resource/train_params.txt \
+    --flagfile resources/train_params.txt \
     --datasets= [Dataset output name] \
     --num_gpus=3 \
     --kg_pretrained_path=<pretrain weights from step 1>
+```
+
+Example
+
+```
+python pretrain.py  \
+    --flagfile resources/train_params.txt \
+    --datasets=wikipedia.h5 \
+    --num_gpus=3 \
+    --kg_pretrained_path=outputs/kgs/lightning_logs/version_0/checkpoints/step_checkpoint_150_510000.ckpt \
+    --kg_cache_path .cache/ntee_2014
+
 ```
 
 
@@ -96,17 +108,17 @@ python pretrain.py  \
 Using eval.sh for easy testing ( run finetuning in seeds 1,2,3,4 )
 
 ```
-     python -m cli.ed_finetune \
-          --weight_path <Checkpoint name> \
-          --config_name <path to config.json>/config \
-          --epochs 10 \
-          --train_bs 16 \
-          --year 2014  \
-          --seed 1 \
-          --warmup_step 100 \
-          --name eval_name \
-          --lr 0.000001 \
-          --output_path outputs/eval_output
+python -m cli.ed_finetune \
+    --weight_path <Checkpoint name> \
+    --config_name <path to config.json>/config \
+    --epochs 10 \
+    --train_bs 16 \
+    --year 2014  \
+    --seed 1 \
+    --warmup_step 100 \
+    --name eval_name \
+    --lr 0.000001 \
+    --output_path outputs/eval_output
 ```
 
 

@@ -5,6 +5,10 @@ import torch
 from torch.utils.data import Dataset
 import numpy as np
 from cmed.utils import negsamp_vectorized_bsearch
+from cmed.constants import (
+    DBPEDIA_SUBJECT_NAME,
+    DBPEDIA_RDF_TYPE_NAME
+)
 
 class KGTriplet(Dataset):
     def __init__(self, filename, session, cache='.cache'):
@@ -70,8 +74,8 @@ class Dbpedia(KGTriplet):
         negative sample 50% either corrupt tail or head
     '''
     type_names = [
-            'http://purl.org/dc/terms/subject',
-            'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
+            DBPEDIA_SUBJECT_NAME,
+            DBPEDIA_RDF_TYPE_NAME,
     ]
 
     def preprocess(self, output_type=False):
@@ -207,7 +211,25 @@ class Dbpedia(KGTriplet):
             type_triplets = self.preprocess(True)[-1]
             torch.save(type_triplets, type_cache_name)
             self.type_triplets = type_triplets
-        self.entity2id =  torch.load(os.path.join(self.session_dir, 'entity2id.pt'))
+        self.entity2id = torch.load(os.path.join(self.session_dir, 'entity2id.pt'))
+        if not os.path.exists(os.path.join(self.session_dir, 'triplets_map.pt')):
+            entity_relations = {}
+            for (head_id, rel_id, tail_id) in self.kg_triplet:
+                if head_id not in entity_relations:
+                    entity_relations[head_id] = {}
+                if tail_id not in entity_relations:
+                    entity_relations[tail_id] = {}
+                
+                if rel_id not in entity_relations[head_id]:
+                    entity_relations[head_id][rel_id] = []
+
+                entity_relations[head_id][rel_id].append(tail_id)
+                
+                if rel_id not in entity_relations[tail_id]:
+                    entity_relations[tail_id][rel_id] = []
+
+                entity_relations[tail_id][rel_id].append(head_id)
+            torch.save(entity_relations, os.path.join(self.session_dir, 'triplets_map.pt'))
 
     def __getitem__(self, idx):
 

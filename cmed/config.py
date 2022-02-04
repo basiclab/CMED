@@ -1,7 +1,7 @@
 import logging
 
 from transformers.configuration_utils import PretrainedConfig
-from transformers.configuration_bert import BertConfig
+from transformers import BertConfig
 
 
 logger = logging.getLogger(__name__)
